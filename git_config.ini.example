@@ -1,0 +1,35 @@
+# Git 自动化配置文件示例
+# 复制此文件为 git_config.ini 并修改配置
+
+[git]
+# Git 用户信息
+user_name = Your Name
+user_email = your.email@example.com
+
+# 主分支名称 (通常为 main 或 master)
+main_branch = main
+
+[github]
+# GitHub 仓库配置
+github_username = your_username
+repository_name = your-repo-name
+
+# 连接方式: https 或 ssh
+# https: 使用 Personal Access Token 认证
+# ssh:   使用 SSH 密钥认证
+connection = https
+
+# 完整的远程仓库 URL（留空则根据上述信息自动生成）
+# HTTPS 示例: https://github.com/username/repo.git
+# SSH 示例:   git@github.com:username/repo.git
+remote_url =
+
+[options]
+# 是否跳过 git hooks（如 pre-commit、pre-push）
+skip_hooks = false
+
+# 是否使用详细输出
+verbose = true
+
+# 提交信息模板（可选）
+commit_template = {type}{scope}: {description}

@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(cat)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"HTTP状态码: %{http_code}\\\\n\" --connect-timeout 10 \"http://export.arxiv.org/api/query?search_query=all:test&max_results=1\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP状态码: %{http_code}\\\\n\" --connect-timeout 10 \"https://export.arxiv.org/api/query?search_query=all:test&max_results=1\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:medical&max_results=1\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:medical+AND+all:image&max_results=1\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:medical%20AND%20all:image&max_results=2\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:medical+AND+all:image&max_results=2\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:llm+AND+submittedDate:%5B202604110000+TO+202604132359%5D&max_results=5\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:llm&max_results=3&sortBy=submittedDate&sortOrder=descending\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:llm+AND+submittedDate:%5B202604090000+TO+202604092359%5D&max_results=3\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:llm+AND+submittedDate:%5B202604080000+TO+202604102359%5D&max_results=10\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:llm&max_results=1\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all:llm+AND+submittedDate:[202604090000+TO+202604092359]&max_results=1\")",
+      "Bash(curl -s \"https://export.arxiv.org/api/query?search_query=all&max_results=5&sortBy=submittedDate&sortOrder=descending\")",
+      "Bash(chmod +x:*)",
+      "Bash(git init:*)",
+      "Bash(git config:*)",
+      "Bash(awk:*)",
+      "Bash(./git_setup.sh:*)"
+    ],
+    "bypassPermissions": true
+  }
+}

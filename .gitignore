@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+
+# 项目特定
+cache/
+*.log
+.env
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
