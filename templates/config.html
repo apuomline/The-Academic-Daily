@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学术论文推送助手 - 配置管理</title>
+    <link rel="stylesheet" href="/static/css/config.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 学术论文推送助手</h1>
+            <p class="subtitle">配置管理面板</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="llm">LLM 配置</button>
+            <button class="tab-btn" data-tab="email">邮箱配置</button>
+            <button class="tab-btn" data-tab="papers">论文管理</button>
+            <button class="tab-btn" data-tab="system">系统状态</button>
+        </nav>
+
+        <main>
+            <!-- LLM Configuration -->
+            <section id="llm" class="tab-content active">
+                <h2>LLM API 配置</h2>
+                <form id="llm-form" class="config-form">
+                    <div class="form-group">
+                        <label for="llm-provider">服务商</label>
+                        <select id="llm-provider" name="provider">
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                            <option value="bigmodel">智谱 AI (BigModel)</option>
+                            <option value="zhipu">Zhipu AI</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="llm-api-key">API Key</label>
+                        <div class="input-group">
+                            <input type="password" id="llm-api-key" name="api_key" placeholder="sk-..." class="password-input">
+                            <button type="button" class="toggle-password" data-target="llm-api-key">👁️</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="llm-base-url">Base URL (可选)</label>
+                        <input type="text" id="llm-base-url" name="base_url" placeholder="https://api.openai.com/v1">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="llm-model">模型名称</label>
+                        <input type="text" id="llm-model" name="model" placeholder="gpt-4o-mini">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="llm-temperature">Temperature</label>
+                            <input type="number" id="llm-temperature" name="temperature" step="0.1" min="0" max="2" value="0.3">
+                        </div>
+                        <div class="form-group">
+                            <label for="llm-max-tokens">Max Tokens</label>
+                            <input type="number" id="llm-max-tokens" name="max_tokens" min="1" max="128000" value="2000">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">保存配置</span>
+                            <span class="btn-loader" style="display: none;">保存中...</span>
+                        </button>
+                        <button type="button" id="test-llm" class="btn btn-secondary">测试连接</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Email Configuration -->
+            <section id="email" class="tab-content">
+                <h2>邮箱配置</h2>
+                <form id="email-form" class="config-form">
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="email-enabled" name="enabled">
+                            <span>启用邮件推送</span>
+                        </label>
+                    </div>
+
+                    <h3>SMTP 配置</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="smtp-host">SMTP 服务器</label>
+                            <input type="text" id="smtp-host" name="host" placeholder="smtp.gmail.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="smtp-port">端口</label>
+                            <input type="number" id="smtp-port" name="port" min="1" max="65535" value="587">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="smtp-username">用户名</label>
+                            <input type="text" id="smtp-username" name="username" placeholder="your@email.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="smtp-password">密码</label>
+                            <div class="input-group">
+                                <input type="password" id="smtp-password" name="password" class="password-input" placeholder="授权码">
+                                <button type="button" class="toggle-password" data-target="smtp-password">👁️</button>
+                            </div>
+                            <small class="hint">⚠️ 请填写邮箱授权码，不是登录密码</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="smtp-from-email">发件人邮箱</label>
+                        <input type="email" id="smtp-from-email" name="from_email" placeholder="noreply@yourdomain.com">
+                    </div>
+
+                    <h3>Resend API (可选)</h3>
+                    <div class="form-group">
+                        <label for="resend-api-key">Resend API Key</label>
+                        <div class="input-group">
+                            <input type="password" id="resend-api-key" name="resend_api_key" placeholder="re_..." class="password-input">
+                            <button type="button" class="toggle-password" data-target="resend-api-key">👁️</button>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-text">保存配置</span>
+                            <span class="btn-loader" style="display: none;">保存中...</span>
+                        </button>
+                        <button type="button" id="test-email" class="btn btn-secondary">测试配置</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Paper Management -->
+            <section id="papers" class="tab-content">
+                <h2>论文管理</h2>
+
+                <div class="paper-settings">
+                    <h3>设置</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="paper-limit">论文数量</label>
+                            <select id="paper-limit">
+                                <option value="5">5 篇</option>
+                                <option value="10" selected>10 篇</option>
+                                <option value="20">20 篇</option>
+                                <option value="50">50 篇</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="fetch-max-results">单次获取上限</label>
+                            <select id="fetch-max-results">
+                                <option value="5">5 篇</option>
+                                <option value="10" selected>10 篇</option>
+                                <option value="20">20 篇</option>
+                                <option value="50">50 篇</option>
+                                <option value="100">100 篇</option>
+                            </select>
+                        </div>
+                    </div>
+                    <p class="hint">💡 提示：生成报告时会调用 LLM，建议数量不超过 20 篇</p>
+                </div>
+
+                <div class="paper-search">
+                    <h3>搜索论文</h3>
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 2;">
+                            <input type="text" id="paper-keywords" placeholder="输入关键词（如：llm, medical image）">
+                        </div>
+                        <button id="search-papers" class="btn btn-primary">搜索</button>
+                    </div>
+                </div>
+
+                <div class="paper-actions">
+                    <h3>操作</h3>
+                    <div class="action-buttons">
+                        <button id="fetch-papers" class="btn btn-secondary">获取论文</button>
+                        <button id="generate-report" class="btn btn-primary">生成报告</button>
+                        <button id="send-report" class="btn btn-secondary">发送邮件</button>
+                    </div>
+                    <p class="hint">💡 提示：论文获取后会保存到数据库，生成报告需要 LLM 处理时间</p>
+                </div>
+
+                <div id="papers-result" class="papers-result" style="display: none;">
+                    <h3>结果</h3>
+                    <div id="papers-list" class="papers-list"></div>
+                </div>
+
+                <div id="papers-status" class="status-panel" style="display: none;">
+                    <h4>操作状态</h4>
+                    <div id="papers-status-details"></div>
+                </div>
+            </section>
+
+            <!-- System Status -->
+            <section id="system" class="tab-content">
+                <h2>系统状态</h2>
+                <div id="system-status" class="status-panel">
+                    <div class="status-item">
+                        <span class="status-label">服务状态</span>
+                        <span class="status-value" id="service-status">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">数据库连接</span>
+                        <span class="status-value" id="db-status">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">LLM 服务商</span>
+                        <span class="status-value" id="llm-provider-status">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">LLM 模型</span>
+                        <span class="status-value" id="llm-model-status">-</span>
+                    </div>
+                </div>
+
+                <h3>流水线操作</h3>
+                <div class="pipeline-actions">
+                    <button id="run-pipeline" class="btn btn-primary">运行完整流水线</button>
+                    <button id="check-pipeline" class="btn btn-secondary">检查流水线状态</button>
+                </div>
+
+                <div id="pipeline-status" class="status-panel" style="display: none;">
+                    <h4>流水线状态</h4>
+                    <div id="pipeline-details"></div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>学术论文推送助手 v1.0.0 | <a href="/api/health">健康检查</a> | <a href="/api/docs">API 文档</a></p>
+        </footer>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/js/config.js"></script>
+</body>
+</html>

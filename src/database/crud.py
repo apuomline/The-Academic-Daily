@@ -170,6 +170,30 @@ class PaperCRUD:
         return list(session.execute(query).scalars().all())
 
     @staticmethod
+    def get_recent_papers(
+        session: Session,
+        limit: int = 20,
+        source: Optional[str] = None,
+    ) -> List[Paper]:
+        """Get recent papers ordered by published date.
+
+        Args:
+            session: Database session
+            limit: Max results
+            source: Optional source filter
+
+        Returns:
+            List of Paper objects
+        """
+        query = select(Paper).order_by(Paper.published_date.desc())
+
+        if source:
+            query = query.where(Paper.source == source)
+
+        query = query.limit(limit)
+        return list(session.execute(query).scalars().all())
+
+    @staticmethod
     def search_papers(
         session: Session,
         keywords: Optional[List[str]] = None,
@@ -177,11 +201,13 @@ class PaperCRUD:
         source: Optional[str] = None,
         limit: int = 100,
     ) -> List[Paper]:
-        """Search papers by keywords.
+        """Search papers by keywords using AND logic.
+
+        All keywords must be present in either title or abstract.
 
         Args:
             session: Database session
-            keywords: Include keywords
+            keywords: Include keywords (must ALL match)
             exclude_keywords: Exclude keywords
             source: Optional source filter
             limit: Max results
@@ -194,13 +220,19 @@ class PaperCRUD:
         if source:
             query = query.where(Paper.source == source)
 
-        # Keyword filtering (simple LIKE query)
+        # Keyword filtering using AND logic - all keywords must match
         if keywords:
-            conditions = []
+            # For each keyword, the paper must match in title OR abstract
+            keyword_conditions = []
             for keyword in keywords:
-                conditions.append(Paper.title.ilike(f"%{keyword}%"))
-                conditions.append(Paper.abstract.ilike(f"%{keyword}%"))
-            query = query.where(or_(*conditions))
+                keyword_conditions.append(
+                    or_(
+                        Paper.title.ilike(f"%{keyword}%"),
+                        Paper.abstract.ilike(f"%{keyword}%"),
+                    )
+                )
+            # All keyword conditions must be true (AND logic)
+            query = query.where(and_(*keyword_conditions))
 
         if exclude_keywords:
             for keyword in exclude_keywords:

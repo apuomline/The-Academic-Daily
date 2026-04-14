@@ -15,7 +15,16 @@ build/
 cache/
 *.log
 .env
+.env.backup
 .DS_Store
+papers.db
+*.db
+
+# 输出文件
+output/
+
+# Claude Code
+.claude/
 
 # IDE
 .vscode/

@@ -107,6 +107,22 @@ python main.py "llm" --schedule --schedule-time 08:30
 python main.py "llm" --send-email --email your@email.com
 ```
 
+### Web API 服务
+
+```bash
+# 启动 Web 服务（开发模式）
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+
+# 启动 Web 服务（生产模式）
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --workers 4
+
+# 访问配置管理页面
+http://localhost:8000
+
+# 访问 API 文档
+http://localhost:8000/api/docs
+```
+
 ## 命令行选项
 
 ```
@@ -151,9 +167,14 @@ LLM 选项:
 
 ```
 .
-├── main.py                   # 主入口脚本
+├── main.py                   # CLI 主入口脚本
 ├── config/                   # 配置模块
 ├── src/
+│   ├── api/                  # FastAPI Web 服务
+│   │   ├── main.py           # FastAPI 应用入口
+│   │   ├── routes/           # API 路由
+│   │   ├── models/           # Pydantic 模型
+│   │   └── services/         # 业务服务
 │   ├── database/             # 数据库层
 │   │   ├── models.py         # SQLAlchemy 模型
 │   │   └── crud.py           # CRUD 操作
@@ -168,7 +189,11 @@ LLM 选项:
 │       ├── scheduler.py      # 定时调度
 │       ├── template_renderer.py  # 模板渲染
 │       └── daily.py          # 每日流水线
+├── static/                   # 静态文件
+│   ├── css/                  # 样式文件
+│   └── js/                   # JavaScript 文件
 ├── templates/                # Jinja2 模板
+│   ├── config.html           # 配置管理页面
 │   ├── daily_report.md       # Markdown 报告模板
 │   └── email.html            # HTML 邮件模板
 ├── tests/                    # 测试文件
@@ -227,12 +252,14 @@ pytest tests/ --cov=src --cov-report=html
 | status | String(20) | 状态 |
 | error_msg | Text | 错误信息 |
 
-## 第三阶段预告
+## 第三阶段（已完成部分）
 
-- Web 后端框架（FastAPI）
-- 用户系统（注册/登录）
-- 订阅管理 API
-- 多渠道推送（企微、钉杆、Telegram）
+- ✅ Web 后端框架（FastAPI）
+- ✅ 配置管理界面（LLM 和邮箱配置）
+- ✅ 配置持久化（自动更新 .env 文件）
+- ✅ API 端点（配置管理、流水线执行）
+- ⏳ 用户系统（注册/登录）- 待实现
+- ⏳ 多渠道推送（企微、钉钉、Telegram）- 待实现
 
 ## 常见问题
 
@@ -265,3 +292,30 @@ A: 所有 60 个测试通过：
 ```
 60 passed in 6.78s
 ```
+
+### Q: 如何启动 Web 配置界面？
+
+A: 使用 uvicorn 启动 FastAPI 服务：
+```bash
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+然后访问 http://localhost:8000 进行配置。
+
+### Q: 配置保存后需要重启服务吗？
+
+A: 是的，配置保存到 `.env` 文件后，需要重启服务才能生效：
+```bash
+# 按 Ctrl+C 停止服务，然后重新启动
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Q: Web API 有哪些端点？
+
+A: 主要端点包括：
+- `GET /` - 配置管理页面
+- `GET /api/docs` - API 文档（Swagger UI）
+- `GET /api/config/llm` - 获取 LLM 配置
+- `PUT /api/config/llm` - 更新 LLM 配置
+- `GET /api/config/email` - 获取邮箱配置
+- `PUT /api/config/email` - 更新邮箱配置
+- `POST /api/pipeline/run` - 运行完整流水线

@@ -12,6 +12,13 @@ APScheduler>=3.10.0
 Jinja2>=3.1.0
 resend>=0.8.0
 
+# 第三阶段依赖 (FastAPI 后端)
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+aiofiles>=23.2.0
+markdown>=3.5.0
+
 # 测试依赖
 pytest>=7.4.0
 pytest-cov>=4.1.0

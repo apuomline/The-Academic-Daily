@@ -1,5 +1,6 @@
 """arXiv API fetcher module."""
 
+import logging
 import time
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -8,6 +9,8 @@ from typing import List, Optional
 from urllib.parse import quote
 
 import requests
+
+logger = logging.getLogger(__name__)
 
 # arXiv API namespaces
 ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
@@ -275,10 +278,94 @@ class ArXivFetcher:
                 papers.append(paper)
             except (AttributeError, ValueError) as e:
                 # Skip malformed entries but log warning
-                print(f"Warning: Failed to parse paper entry: {e}")
+                logger.warning(f"Failed to parse paper entry: {e}")
                 continue
 
         return papers
+
+    def fetch_with_fallback(
+        self,
+        keywords: str,
+        min_papers: int,
+        categories: Optional[List[str]] = None,
+        max_days_back: int = 30,
+        max_results: Optional[int] = None,
+    ) -> List[Paper]:
+        """Fetch papers with automatic date range extension if not enough papers.
+
+        This method will start with today's papers and progressively extend
+        the time range backwards until enough papers are found or max_days_back
+        is reached.
+
+        Args:
+            keywords: Search keywords
+            min_papers: Minimum number of papers required
+            categories: Optional list of arXiv categories
+            max_days_back: Maximum days to look back (default: 30)
+            max_results: Maximum results per query (default: self.max_results)
+
+        Returns:
+            List of Paper objects
+
+        Example:
+            >>> fetcher = ArXivFetcher()
+            >>> papers = fetcher.fetch_with_fallback("llm", min_papers=10)
+            >>> print(f"Got {len(papers)} papers")
+        """
+        logger.info(f"🔍 开始获取论文: 最少需要 {min_papers} 篇")
+
+        all_papers = []
+        seen_ids = set()  # Track seen papers to avoid duplicates
+        days_checked = 0
+
+        # Start with today and go backwards
+        end_date = datetime.utcnow()
+
+        while days_checked < max_days_back and len(all_papers) < min_papers:
+            # Check one day at a time
+            start_date = end_date - timedelta(days=1)
+
+            # Format dates for arXiv API
+            start_str = start_date.strftime("%Y%m%d")
+            end_str = end_date.strftime("%Y%m%d")
+
+            logger.info(f"  → 检查日期: {start_str} (回溯 {days_checked + 1} 天)")
+
+            try:
+                papers = self.fetch(
+                    keywords,
+                    date_range=(start_str, end_str),
+                    categories=categories,
+                    max_results=max_results or self.max_results,
+                )
+
+                # Add new papers (avoid duplicates)
+                new_papers = []
+                for paper in papers:
+                    if paper.arxiv_id not in seen_ids:
+                        seen_ids.add(paper.arxiv_id)
+                        new_papers.append(paper)
+                        all_papers.append(paper)
+
+                logger.info(f"     ✓ 获取到 {len(papers)} 篇, 新增 {len(new_papers)} 篇, 总计 {len(all_papers)} 篇")
+
+            except Exception as e:
+                logger.warning(f"     ✗ 获取失败: {e}")
+
+            # Move the window back one day
+            end_date = start_date
+            days_checked += 1
+
+            # If we have enough papers, stop
+            if len(all_papers) >= min_papers:
+                logger.info(f"✓ 已获取足够的论文 ({len(all_papers)} >= {min_papers})")
+                break
+
+        if len(all_papers) < min_papers:
+            logger.warning(f"⚠️  仅获取到 {len(all_papers)} 篇论文，未达到要求的 {min_papers} 篇")
+            logger.warning(f"   已回溯 {days_checked} 天，建议增加关键词范围或时间范围")
+
+        return all_papers
 
     def fetch_last_24h(
         self,

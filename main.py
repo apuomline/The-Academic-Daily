@@ -26,12 +26,69 @@ from src.parsers import PaperParser, PDFParser
 from src.summarizers import create_summarizer, SummaryResult
 from src.pipelines import DailyReportPipeline, TemplateRenderer, create_scheduler
 
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper()),
-    format='%(asctime)s - %(levelname)s - %(message)s',
-)
-logger = logging.getLogger(__name__)
+
+# ==================== 日志配置 ====================
+class ColoredFormatter(logging.Formatter):
+    """彩色日志格式化器."""
+
+    # ANSI 颜色代码
+    COLORS = {
+        'DEBUG': '\033[36m',      # 青色
+        'INFO': '\033[32m',       # 绿色
+        'WARNING': '\033[33m',    # 黄色
+        'ERROR': '\033[31m',      # 红色
+        'CRITICAL': '\033[35m',   # 紫色
+    }
+    BOLD_COLORS = {
+        'DEBUG': '\033[1;36m',
+        'INFO': '\033[1;32m',
+        'WARNING': '\033[1;33m',
+        'ERROR': '\033[1;31m',
+        'CRITICAL': '\033[1;35m',
+    }
+    RESET = '\033[0m'
+
+    def format(self, record):
+        # 添加颜色
+        levelname = record.levelname
+        if levelname in self.BOLD_COLORS:
+            record.levelname = f"{self.BOLD_COLORS[levelname]}{levelname:<8}{self.RESET}"
+        return super().format(record)
+
+
+def setup_logging(log_level="INFO"):
+    """配置日志系统."""
+    # 创建根日志记录器
+    root_logger = logging.getLogger()
+    root_logger.setLevel(getattr(logging, log_level.upper()))
+
+    # 清除现有处理器
+    root_logger.handlers.clear()
+
+    # 创建控制台处理器
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(getattr(logging, log_level.upper()))
+
+    # 创建彩色格式化器
+    formatter = ColoredFormatter(
+        fmt='%(asctime)s | %(levelname)s | %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    console_handler.setFormatter(formatter)
+
+    # 添加处理器
+    root_logger.addHandler(console_handler)
+
+    # 配置第三方库的日志级别
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+    logging.getLogger('httpx').setLevel(logging.WARNING)
+    logging.getLogger('sqlalchemy').setLevel(logging.WARNING)
+
+    return root_logger
+
+
+# 初始化日志
+logger = setup_logging(settings.log_level)
 
 
 def parse_args():
@@ -179,9 +236,12 @@ def parse_args():
 
 def init_database():
     """Initialize database tables."""
-    logger.info("Initializing database...")
+    logger.info("=" * 60)
+    logger.info("🗄️  初始化数据库")
+    logger.info("=" * 60)
     db_manager.create_tables()
-    logger.info(f"Database initialized: {db_manager.database_url}")
+    logger.info(f"✅ 数据库已初始化: {db_manager.database_url}")
+    logger.info("=" * 60)
 
 
 def run_single_fetch(args):
@@ -193,13 +253,14 @@ def run_single_fetch(args):
     keywords = args.keywords if args.keywords else ["llm"]
     keywords_str = " ".join(keywords)
 
-    print(f"🔍 学术论文推送助手 (Phase 2)")
-    print(f"{'=' * 50}")
-    print(f"搜索关键词: {keywords_str}")
-    print(f"数据源: {', '.join(args.sources)}")
-    print(f"LLM 提供商: {args.provider}")
-    print(f"模型: {args.model}")
-    print(f"{'=' * 50}\n")
+    logger.info("=" * 60)
+    logger.info("🔍 学术论文推送助手 (Phase 2)")
+    logger.info("=" * 60)
+    logger.info(f"📝 搜索关键词: {keywords_str}")
+    logger.info(f"📡 数据源: {', '.join(args.sources)}")
+    logger.info(f"🤖 LLM 提供商: {args.provider}")
+    logger.info(f"🧠 LLM 模型: {args.model}")
+    logger.info("=" * 60)
 
     # Initialize fetchers
     fetchers = {
@@ -217,9 +278,10 @@ def run_single_fetch(args):
         sources_to_fetch = ["arxiv", "openalex", "semantic_scholar"]
 
     # Fetch papers
+    logger.info("📥 开始获取论文...")
     all_papers = []
     for source in sources_to_fetch:
-        print(f"📥 正在从 {source} 获取论文...")
+        logger.info(f"  → 从 {source} 获取...")
         fetcher = fetchers[source]
 
         try:
@@ -242,18 +304,20 @@ def run_single_fetch(args):
                 # OpenAlex and Semantic Scholar don't support all options
                 papers = fetcher.fetch(keywords_str, max_results=args.max_results)
 
-            print(f"   ✓ 获取到 {len(papers)} 篇论文")
+            logger.info(f"     ✓ 获取到 {len(papers)} 篇论文")
             all_papers.extend(papers)
 
         except Exception as e:
-            print(f"   ✗ 获取失败: {e}")
+            logger.error(f"     ✗ 获取失败: {e}")
 
     if not all_papers:
-        print("\n⚠️  未找到匹配的论文")
+        logger.warning("⚠️  未找到匹配的论文")
         return 1
 
+    logger.info(f"✓ 总共获取到 {len(all_papers)} 篇论文")
+
     # Parse and deduplicate
-    print(f"\n🔧 正在处理论文（去重、合并版本）...")
+    logger.info("🔧 正在处理论文（去重、合并版本）...")
     parser = PaperParser()
 
     processed_papers = parser.parse_and_process(
@@ -263,11 +327,11 @@ def run_single_fetch(args):
         exclude_keywords=args.exclude,
     )
 
-    print(f"   ✓ 处理后剩余 {len(processed_papers)} 篇论文")
+    logger.info(f"  ✓ 处理后剩余 {len(processed_papers)} 篇论文")
 
     # Generate LLM summaries
     if processed_papers:
-        print(f"\n🤖 正在使用 LLM 生成结构化中文摘要...")
+        logger.info("🤖 正在使用 LLM 生成结构化中文摘要...")
         summarizer = create_summarizer(
             provider=args.provider,
             model=args.model,
@@ -290,9 +354,9 @@ def run_single_fetch(args):
                     intro_text = result.get("intro_text")
                     has_pdf = result.get("success", False)
                     if has_pdf:
-                        print(f"   [{i}/{len(processed_papers)}] ✓ 已获取 PDF: {paper.title[:50]}...")
+                        logger.info(f"  [{i:2d}/{len(processed_papers)}] ✓ {paper.title[:50]}...")
                     else:
-                        print(f"   [{i}/{len(processed_papers)}] ✗ PDF 下载失败，跳过: {paper.title[:50]}...")
+                        logger.warning(f"  [{i:2d}/{len(processed_papers)}] ✗ PDF 下载失败，跳过: {paper.title[:50]}...")
                         skipped_count += 1
                         continue
 
@@ -310,28 +374,27 @@ def run_single_fetch(args):
                     papers_to_keep.append(paper)
 
                     if not has_pdf:
-                        print(f"   [{i}/{len(processed_papers)}] {paper.title[:50]}...")
+                        logger.info(f"  [{i:2d}/{len(processed_papers)}] ... {paper.title[:50]}...")
                 else:
-                    logger.warning(f"Failed to summarize paper {paper.arxiv_id}: {summary_result.error}")
+                    logger.warning(f"  ⚠️  摘要生成失败: {paper.arxiv_id}: {summary_result.error}")
                     # Still keep the paper but without structured summary
                     papers_to_keep.append(paper)
 
             except Exception as e:
-                import traceback
-                logger.warning(f"Failed to summarize paper {paper.arxiv_id}: {e}\n{traceback.format_exc()}")
+                logger.warning(f"  ⚠️  处理失败 {paper.arxiv_id}: {e}")
                 # Still keep the paper
                 papers_to_keep.append(paper)
 
         # Update processed_papers to only include successfully processed ones
         processed_papers = papers_to_keep
 
-        print(f"   ✓ 完成 {len(processed_papers)} 篇论文的摘要生成")
+        logger.info(f"  ✓ 完成了 {len(processed_papers)} 篇论文的摘要生成")
         if skipped_count > 0:
-            print(f"   ⚠️  跳过了 {skipped_count} 篇 PDF 下载失败的论文")
+            logger.warning(f"  ⚠️  跳过了 {skipped_count} 篇 PDF 下载失败的论文")
 
     # Save to database
     if not args.no_db:
-        print(f"\n💾 正在保存到数据库...")
+        logger.info("💾 正在保存到数据库...")
         session = db_manager.get_session()
 
         try:
@@ -351,19 +414,19 @@ def run_single_fetch(args):
                     )
                     saved_count += 1
                 except Exception as e:
-                    logger.warning(f"Failed to save paper: {e}")
+                    logger.warning(f"  ✗ 保存失败: {e}")
 
             session.commit()
-            print(f"   ✓ 保存了 {saved_count} 篇论文到数据库")
+            logger.info(f"  ✓ 保存了 {saved_count} 篇论文到数据库")
 
         except Exception as e:
             session.rollback()
-            print(f"   ✗ 数据库保存失败: {e}")
+            logger.error(f"  ✗ 数据库保存失败: {e}")
         finally:
             session.close()
 
     # Generate report
-    print(f"\n📝 正在生成报告...")
+    logger.info("📝 正在生成报告...")
     renderer = TemplateRenderer()
 
     report_date = datetime.now().strftime("%Y-%m-%d")
@@ -389,29 +452,29 @@ def run_single_fetch(args):
     )
 
     # Output report
-    print(f"\n💾 正在保存报告...")
+    logger.info("💾 正在保存报告...")
 
     if args.format in ["markdown", "all"]:
         output_path = args.output or Path(settings.output_dir) / f"DAILY_REPORT_{report_date}.md"
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         Path(output_path).write_text(markdown, encoding="utf-8")
-        print(f"   ✓ Markdown: {output_path}")
+        logger.info(f"  ✓ Markdown: {output_path}")
 
     if args.format in ["html", "all"]:
         output_path = args.output or Path(settings.output_dir) / f"DAILY_REPORT_{report_date}.html"
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         Path(output_path).write_text(html, encoding="utf-8")
-        print(f"   ✓ HTML: {output_path}")
+        logger.info(f"  ✓ HTML: {output_path}")
 
     if args.format in ["text", "all"]:
         output_path = args.output or Path(settings.output_dir) / f"DAILY_REPORT_{report_date}.txt"
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
         Path(output_path).write_text(text, encoding="utf-8")
-        print(f"   ✓ Text: {output_path}")
+        logger.info(f"  ✓ Text: {output_path}")
 
     # Send email if requested
     if args.send_email or args.email:
-        print(f"\n📧 正在发送邮件...")
+        logger.info("📧 正在发送邮件...")
 
         try:
             from src.pushers import EmailPusher
@@ -429,19 +492,20 @@ def run_single_fetch(args):
             )
 
             if results.get("success"):
-                print(f"   ✓ 成功发送到 {len(results['success'])} 个邮箱")
+                logger.info(f"  ✓ 成功发送到 {len(results['success'])} 个邮箱")
+                for email in results['success']:
+                    logger.info(f"     → {email}")
             if results.get("failed"):
-                print(f"   ✗ 失败: {len(results['failed'])} 个邮箱")
+                logger.error(f"  ✗ 失败: {len(results['failed'])} 个邮箱")
                 for item in results['failed']:
-                    print(f"      邮箱: {item.get('email')}")
-                    print(f"      错误: {item.get('error')}")
+                    logger.error(f"     ✗ {item.get('email')}: {item.get('error')}")
 
         except Exception as e:
-            print(f"   ✗ 邮件发送失败: {e}")
+            logger.error(f"  ✗ 邮件发送失败: {e}")
 
-    print(f"\n{'=' * 50}")
-    print(f"✨ 完成!")
-    print(f"{'=' * 50}")
+    logger.info("=" * 60)
+    logger.info("✨ 完成!")
+    logger.info("=" * 60)
 
     return 0
 
@@ -455,12 +519,26 @@ def run_pipeline(args):
     keywords = args.keywords if args.keywords else ["llm"]
     exclude = args.exclude if hasattr(args, "exclude") else None
 
-    logger.info("Starting daily pipeline...")
+    logger.info("=" * 60)
+    logger.info("🚀 启动每日流水线")
+    logger.info("=" * 60)
+    logger.info(f"📝 关键词: {', '.join(keywords)}")
+    if exclude:
+        logger.info(f"🚫 排除: {', '.join(exclude)}")
+    logger.info("=" * 60)
 
     pipeline = DailyReportPipeline()
     results = pipeline.run_daily_pipeline(keywords, exclude)
 
-    logger.info(f"Pipeline results: {results}")
+    logger.info("=" * 60)
+    logger.info("📊 流水线结果:")
+    logger.info(f"  获取论文: {results.get('papers_fetched', 0)} 篇")
+    logger.info(f"  生成报告: {'是' if results.get('reports_generated') else '否'}")
+    logger.info(f"  发送成功: {results.get('emails_sent', 0)} 个")
+    logger.info(f"  发送失败: {results.get('emails_failed', 0)} 个")
+    if results.get("errors"):
+        logger.error(f"  错误: {', '.join(results['errors'])}")
+    logger.info("=" * 60)
 
     return 0 if not results.get("errors") else 1
 
@@ -471,10 +549,13 @@ def run_scheduled(args):
     Args:
         args: Parsed command line arguments
     """
-    logger.info("Starting scheduled mode...")
+    logger.info("=" * 60)
+    logger.info("⏰ 启动定时调度模式")
+    logger.info("=" * 60)
 
     # Parse schedule time
     hour, minute = map(int, args.schedule_time.split(":"))
+    logger.info(f"🕐 每日运行时间: {args.schedule_time}")
 
     # Create scheduler
     scheduler = create_scheduler(daily_hour=hour, daily_minute=minute)
@@ -484,6 +565,7 @@ def run_scheduled(args):
         keywords = args.keywords if args.keywords else ["llm"]
         exclude = args.exclude if hasattr(args, "exclude") else None
 
+        logger.info("⏰ 执行定时任务...")
         pipeline = DailyReportPipeline()
         pipeline.run_daily_pipeline(keywords, exclude)
 
@@ -492,9 +574,14 @@ def run_scheduled(args):
 
     # Start scheduler
     try:
+        logger.info("✅ 调度器已启动，按 Ctrl+C 停止")
+        logger.info("=" * 60)
         scheduler.start()
     except KeyboardInterrupt:
-        logger.info("Scheduler stopped by user")
+        logger.info("")
+        logger.info("=" * 60)
+        logger.info("🛑 用户停止调度器")
+        logger.info("=" * 60)
         scheduler.shutdown()
 
     return 0
